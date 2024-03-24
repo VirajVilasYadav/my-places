@@ -1,0 +1,30 @@
+<div class="container-fluid" data-bs-theme="dark">
+  <nav class="navbar navbar-expand-sm bg-dark navbar-dark">
+    <div class="container-fluid">
+      <ul class="navbar-nav">
+        <li class="nav-item">
+          <a class="nav-link active" href="#">Home</a>
+        </li>
+      </ul>
+    </div>
+  </nav>
+
+
+  <!-- Home -->
+  <div class="container">
+    <div class="row">
+      <div class="col-12">
+        <!-- Map -->
+        <div class="map-container"
+          leaflet
+          [leafletOptions]="options"
+          (leafletMapReady)="onMapReady($event)"
+          (leafletClick)="mapClicked($event)">
+        </div>
+        <!-- Map -->
+      </div>
+    </div>
+  </div>
+  <!-- Home -->
+
+</div>

@@ -2,6 +2,8 @@ import { AfterViewInit, Component, OnDestroy, OnInit } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { LeafletModule } from '@asymmetrik/ngx-leaflet';
 import * as Leaflet from 'leaflet';
+import { Observable } from 'rxjs';
+import { CustomPosition } from './models/map.model';
 Leaflet.Icon.Default.imagePath = 'assets/';
 
 @Component({
@@ -28,6 +30,8 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
     zoom: 16,
     center: { lat: 28.626137, lng: 79.821603 }
   }
+  geoLocationMarker: Leaflet.Marker<any> | undefined;
+  geoLocationMarkerIndex: number | undefined;
 
   constructor() {
 
@@ -94,23 +98,88 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
     console.log($event.target.getLatLng());
   }
 
-  addMarker() {
+  addMarker(position: CustomPosition) {
     const data = {
-      position: { lat: 28.625043, lng: 79.810135 },
+      position: position,
       draggable: true
     }
     const marker = this.generateMarker(data, this.markers.length - 1);
     marker.addTo(this.map).bindPopup(`<b>${data.position.lat},  ${data.position.lng}</b>`);
     this.markers.push(marker);
+    return this.markers.length - 1;
   }
 
-  removeMarker(index: number) {
-    this.map.removeLayer(this.markers[index])
-    this.markers.splice(index, 1)
+  removeMarker(index: number | undefined) {
+    if (index) {
+      this.map.removeLayer(this.markers[index])
+      this.markers.splice(index, 1)
+    }
   }
 
-  updateMarker(index: number) {
-    this.markers[index].setLatLng({ lat: 28.625043, lng: 79.810135 });
+  updateMarker(index: number, position: CustomPosition) {
+    this.markers[index].setLatLng(position);
+  }
+
+  getGeoLocation(): Observable<CustomPosition> {
+    return new Observable(subscriber => {
+      /* geolocation is available */
+      if ("geolocation" in navigator) {
+        navigator.geolocation.getCurrentPosition((position) => {
+          subscriber.next({ lat: position.coords.latitude, lng: position.coords.longitude });
+        });
+      } else {
+        /* geolocation IS NOT available */
+        subscriber.error('Geolocation is not available');
+      }
+    });
+  }
+
+  watchGeoLocation(): Observable<CustomPosition> {
+    return new Observable(subscriber => {
+      /* geolocation is available */
+      if ("geolocation" in navigator) {
+        const watchID = navigator.geolocation.watchPosition((position) => {
+          subscriber.next({ lat: position.coords.latitude, lng: position.coords.longitude });
+        });
+      } else {
+        /* geolocation IS NOT available */
+        subscriber.error('Geolocation is not available');
+      }
+    });
+  }
+
+  locateMe() {
+    this.getGeoLocation().subscribe({
+      next: location => {
+        console.log(location);
+        if (this.geoLocationMarker) {
+          this.removeMarker(this.geoLocationMarkerIndex)
+        }
+        this.geoLocationMarkerIndex = this.addMarker(location);
+        this.geoLocationMarker = this.markers[this.geoLocationMarkerIndex];
+        this.map.panTo(location);
+      },
+      error: error => {
+        alert(error);
+      }
+    });
+  }
+
+  locateAndTrackMe() {
+    this.watchGeoLocation().subscribe({
+      next: location => {
+        console.log(location);
+        if (this.geoLocationMarker) {
+          this.removeMarker(this.geoLocationMarkerIndex)
+        }
+        this.geoLocationMarkerIndex = this.addMarker(location);
+        this.geoLocationMarker = this.markers[this.geoLocationMarkerIndex];
+        this.map.panTo(location);
+      },
+      error: error => {
+        alert(error);
+      }
+    });
   }
 
   ngOnDestroy(): void {
